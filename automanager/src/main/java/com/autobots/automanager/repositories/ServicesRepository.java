@@ -1,9 +1,11 @@
 package com.autobots.automanager.repositories;
 
-import com.autobots.automanager.entities.Document;
+import com.autobots.automanager.entities.Services;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+
 @Repository
-public interface DocumentRepository extends JpaRepository<Document, Long> {
+public interface ServicesRepository extends JpaRepository<Services, Long> {
+
 }
