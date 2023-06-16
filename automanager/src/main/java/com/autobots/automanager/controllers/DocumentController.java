@@ -1,13 +1,15 @@
 package com.autobots.automanager.controllers;
 
 import com.autobots.automanager.entities.Document;
-import com.autobots.automanager.models.DocumentSelect;
+import com.autobots.automanager.models.AddLinkDocument;
 import com.autobots.automanager.models.DocumentUpdate;
+import com.autobots.automanager.models.DocumentSelect;
 import com.autobots.automanager.repositories.DocumentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.print.Doc;
 import java.util.List;
 
 @RestController
@@ -18,37 +20,72 @@ public class DocumentController {
     private DocumentRepository repository;
 
     @Autowired
-    private DocumentSelect select;
+    private DocumentSelect selector;
+    @Autowired
+    private AddLinkDocument addLink;
 
     @GetMapping("/documentos")
-    public List<Document> findDocuments(){
+    public ResponseEntity<List<Document>> findDocuments(){
         List<Document> documents = repository.findAll();
-        return documents;
+        if (documents.isEmpty()) {
+            ResponseEntity<List<Document>> res = new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return res;
+        } else {
+            addLink.linkAdd(documents);
+            ResponseEntity<List<Document>> res = new ResponseEntity<>(documents, HttpStatus.FOUND);
+            return res;
+        }
     }
 
     @GetMapping("/documento/{id}")
-    public Document findDocumentById(@PathVariable Long id){
-        List<Document> document = repository.findAll();
-        return select.selector(document, id);
+    public ResponseEntity<Document> findDocumentById(@PathVariable Long id){
+        List<Document> documents = repository.findAll();
+        Document document =  selector.selector(documents, id);
+        if (document == null) {
+            ResponseEntity<Document> res = new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return res;
+        } else {
+            addLink.linkAdd(document);
+            ResponseEntity<Document> res = new ResponseEntity<>(document, HttpStatus.FOUND);
+            return res;
+        }
     }
 
-    @PostMapping("/documento")
-    public void createDocument(@RequestBody Document document) {
-        repository.save(document);
+    @PostMapping("/documento/cadastro")
+    public ResponseEntity<?> createDocument(@RequestBody Document document) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        if (document.getId() == null) {
+            repository.save(document);
+            status = HttpStatus.CREATED;
+        }
+        return new ResponseEntity<>(status);
     }
 
 
     @PutMapping("/atualizar")
-    public void updateDocument(@RequestBody Document toUpdate) {
-        Document documento = repository.getById(toUpdate.getId());
-        DocumentUpdate updator = new DocumentUpdate();
-        updator.update(documento, toUpdate);
-        repository.save(documento);
+    public ResponseEntity<?> updateDocument(@RequestBody Document documentUpdate) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        Document document = repository.getById(documentUpdate.getId());
+        if (document != null) {
+            DocumentUpdate atualizador = new DocumentUpdate();
+            atualizador.update(document, documentUpdate);
+            repository.save(document);
+            status = HttpStatus.OK;
+        } else {
+            status = HttpStatus.BAD_REQUEST;
+        }
+        return new ResponseEntity<>(status);
     }
 
     @DeleteMapping("/excluir")
-    public void excludeDocument(@RequestBody Document exclude) {
+    public ResponseEntity<?> deleteDocument(@RequestBody Document exclude) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
         Document document = repository.getById(exclude.getId());
-        repository.delete(document);
+        if (document != null) {
+            repository.delete(document);
+            status = HttpStatus.OK;
+        }
+        return new ResponseEntity<>(status);
+
     }
 }
